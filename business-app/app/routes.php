@@ -50,8 +50,14 @@ return function (App $app) {
         
         $conn = getConnection();
 
+        $idCatalog = $request->getBody()['id_catalog'];
+        $catalogName = $request->getBody()['catalog_name'];
+        $availability = $request->getBody()['availability'];
+        //$catalogPrice = $request->getParsedBody()['catalog_price'];
+        $catalogPrice = 300.0;
+
         $sql = "INSERT INTO catalogs (id_catalog, catalog_name, availability, catalog_price) 
-        VALUES ('CAT-00005', 'OTONO', true, 550.0);";
+        VALUES ('" . $idCatalog . "', '" . $catalogName . "'," . $availability . ", " . $catalogPrice . ");";
 
         if ($conn->query($sql) === TRUE) {
             //echo "New record created successfully";
@@ -61,7 +67,8 @@ return function (App $app) {
             $response->getBody()->write("Error: " . $sql . "<br>" . $conn->error);
         }
         $conn->close();  
-        
+
+              
         return $response;
     });
 
@@ -88,7 +95,7 @@ return function (App $app) {
         
         $conn = getConnection();
 
-        $pass = '12345';
+        $zpass = '12345';
 
         $encryptedPassword = crypt($pass, 'rl'); 
 
@@ -141,12 +148,14 @@ return function (App $app) {
         return $response;
     });
 
-    $app->get('/catalogDelete', function (Request $request, Response $response) {
+    $app->get('/catalogDelete/[{id_catalog}]', function (Request $request, Response $response, $args) {
         
+        $id = $args['id_catalog'];
+
         $conn = getConnection();
 
         // sql to delete a record
-        $sql = "DELETE FROM catalogs WHERE id_catalog='CAT-00002'";
+        $sql = "DELETE FROM catalogs WHERE id_catalog='" . $id . "'";
 
         if ($conn->query($sql) === TRUE) {
             //echo "Record deleted successfully";
@@ -263,20 +272,27 @@ return function (App $app) {
         
         $conn = getConnection();
 
-        $sql = "SELECT * from catalogs ";
+        $id = $args['id_catalog'];
+
+        $sql = "SELECT * from catalogs WHERE id_catalog='" . $id . "' ";
 
         $result = $conn->query($sql);
 
-        $json = '{';
+        $json = "{'values': [";
 
         if ($result->num_rows > 0) {
+            $first = true;
             // output data of each row
             while($row = $result->fetch_assoc()) {
                 //echo "id: " . $row["id"]. " - Name: " . $row["firstname"]. " " . $row["lastname"]. "<br>";
-                $json = $json . "{'id_catalog': {$row['id_catalog']}, 'catalog_name': {$row['catalog_name']}, 
-                'availability': {$row['availability']}, 'catalog_price': {$row['catalog_price']}}";
+                if(!$first){
+                    $json = $json . ","; 
+                }else{
+                    $first = false;
+                }
+                $json = $json . "{'id_catalog': '{$row['id_catalog']}', 'catalog_name': '{$row['catalog_name']}', 'availability': {$row['availability']}, 'catalog_price': {$row['catalog_price']}}";
             }
-            $json = $json . '}';
+            $json = $json . "] }";
             $response->getBody()->write($json);
         } else {
             //echo "0 results";
@@ -288,4 +304,42 @@ return function (App $app) {
         
         return $response;
     });
+
+
+    $app->get('/allProducts/[{id_product}]', function (Request $request, Response $response, $args) {
+        
+        $conn = getConnection();
+
+        $id = $args['id_product'];
+
+        $sql = "SELECT * FROM products WHERE id_product='" . $id . "'";
+
+        $result = $conn->query($sql);
+
+        $json = "{'values': [";
+
+        if ($result->num_rows > 0) {
+            $first = true;
+            // output data of each row
+            while($row = $result->fetch_assoc()) {
+                if(!$first){
+                    $json = $json . ","; 
+                }else{
+                    $first = false;
+                }
+                $json = $json . "{'id_product': '{$row['id_product']}', 'product_name': '{$row['product_name']}', 'id_catalog': '{$row['id_catalog']}', 'availability': {$row['availability']}, 'product_price': {$row['product_price']} , 'product_color': '{$row['product_color']}'}";
+            }
+            $json = $json . "] }";
+            $response->getBody()->write($json);
+        } else {
+            //echo "0 results";
+            $response->getBody()->write("Error: " . $sql . "<br>" . $conn->error);
+
+        }
+
+        $conn->close();
+        
+        return $response;
+    });
+
 };
